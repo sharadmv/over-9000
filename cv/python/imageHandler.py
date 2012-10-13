@@ -2,7 +2,7 @@ from SimpleCV import *
 import time
 
 CAMERA_PROPERTIES = {'width':160, 'height':120}
-cam = Camera(camera_index=0, prop_set=CAMERA_PROPERTIES)
+cam = Camera(camera_index=1, prop_set=CAMERA_PROPERTIES)
 
 
 def process_frame(image):
