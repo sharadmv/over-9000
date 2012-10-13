@@ -2,10 +2,13 @@ from SimpleCV import *
 import time
 
 CAMERA_PROPERTIES = {'width':160, 'height':120}
-cam = Camera(camera_index=1, prop_set=CAMERA_PROPERTIES)
+cam = Camera(camera_index=0, prop_set=CAMERA_PROPERTIES)
 
 
 def process_frame(image):
+	segment = HaarCascade("face.xml")
+	face = image.findHaarFeatures(segment)
+	
 	image = image.toHSV()
 	for i in range(160):
 		for j in range(120):
@@ -24,12 +27,13 @@ def process_frame(image):
 		for b in blobs:
 			b.drawHull(color=Color.GREEN,width=3,alpha=128)
 			
-	
-	x,y = blobs[-1].centroid()
-	circleLayer = DrawingLayer((image.width, image.height))
-	circleLayer.circle((x,y), 20, Color.RED, True)
-	image.addDrawingLayer(circleLayer)
-	image.applyLayers()
+		x,y = blobs[-1].centroid()
+		circleLayer = DrawingLayer((image.width, image.height))
+		circleLayer.circle((x,y), 20, Color.RED, True)
+		image.addDrawingLayer(circleLayer)
+		image.applyLayers()
+		if face:
+			face.show()
 	return (x,y)
 
 def main():
