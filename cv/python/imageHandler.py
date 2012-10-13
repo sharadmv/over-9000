@@ -1,114 +1,131 @@
 from SimpleCV import *
+
 import time
+import urllib2 as url
+import sh
+import os
+
+from urllib import urlretrieve
 
 CAMERA_PROPERTIES = {'width':160, 'height':120}
-cam = Camera(camera_index=0, prop_set=CAMERA_PROPERTIES)
 
+class HandExtractor:
 
-def process_frame(image):
-	segment = HaarCascade("face.xml")
-	face = image.findHaarFeatures(segment)
+    def __init__(self):
+        self.camera = Camera(prop_set=CAMERA_PROPERTIES)
+        self.buffer = []
+        self.difference = []
+        # the number of past points do we keep
+        self.length = 20
+
+        #testing code
+        self.penalty = 3
+        self.count = 3
+        self.current_direction = None
+
+    def start(self):
+        while True:
+            f = self.camera.getImage()
+            self.f = f.copy()
+            hand = self.process_frame(f)
+            self.process_hand(hand)
+            gesture = self.get_gesture()
+            if gesture:
+                self.trigger_gesture(gesture)
+            time.sleep(0.05)
+
+    def get_gesture(self):
+        if self.count >= 10:
+            self.penalty = 0
+            self.count = 0
+            return self.current_direction
+
+    def process_hand(self, hand):
+        if (len(self.buffer) > self.length):
+            self.buffer.pop(0)
+            self.difference.pop(0)
+
+        if len(self.buffer) > 0:
+            diff = (hand[0] - self.buffer[len(self.buffer)-1][0],
+                    hand[1] - self.buffer[len(self.buffer)-1][1])
+            self.difference.append(diff)
+
+        self.buffer.append(hand)
+        print(self.count)
+
+        if self.difference:
+            if self.current_direction == "left":
+                if diff[0] > 0:
+                    self.count += 1
+                else:
+                    self.penalty += 1
+
+            elif self.current_direction == "right":
+                if diff[0] < 0:
+                    self.count += 1
+                else:
+                    self.penalty += 1
+
+            else:
+                if diff[0] > 0:
+                    self.current_direction = "left"
+                else:
+                    self.current_direction = "right"
+
+            if self.penalty == 3:
+                self.penalty = 0
+                self.count = 0
+                self.current_direction = None
+
+    def process_frame(self, image):
+		segment = HaarCascade("face.xml")
+		face = image.findHaarFeatures(segment)
 	
-	image = image.toHSV()
-	for i in range(160):
-		for j in range(120):
-			h,s,v = image[i,j]
-			if v>= 15 and v<=250 and h>=3 and h<=33:
-				image[i,j] = (100,0,0)
-			else:
-				image[i,j] = (0,0,100)
+		image = image.toHSV()
+		for i in range(160):
+			for j in range(120):
+				h,s,v = image[i,j]
+				if v>= 15 and v<=250 and h>=3 and h<=33:
+					image[i,j] = (100,0,0)
+				else:
+					image[i,j] = (0,0,100)
+					
+		image = image.toRGB()
+		blobs = image.findBlobs()
+		ed = image.edges(60,300)
+		
+
+		if blobs:
+			for b in blobs:
+				b.drawHull(color=Color.GREEN,width=3,alpha=128)
 				
-	image = image.toRGB()
-	blobs = image.findBlobs()
-	ed = image.edges(60,300)
-	
+			x,y = blobs[-1].centroid()
+			circleLayer = DrawingLayer((image.width, image.height))
+			circleLayer.circle((x,y), 20, Color.RED, True)
+			image.addDrawingLayer(circleLayer)
+			image.applyLayers()
+			if face:
+				face.show()
+		return (x,y)
 
-	if blobs:
-		for b in blobs:
-			b.drawHull(color=Color.GREEN,width=3,alpha=128)
-			
-		x,y = blobs[-1].centroid()
-		circleLayer = DrawingLayer((image.width, image.height))
-		circleLayer.circle((x,y), 20, Color.RED, True)
-		image.addDrawingLayer(circleLayer)
-		image.applyLayers()
-		if face:
-			face.show()
-	return (x,y)
+    def trigger_gesture(self, gesture):
+        url.urlopen('http://localhost:8080/api/'+gesture)
+        print("YES A GESTURE:", gesture)
+        self.take_picture()
 
-def main():
-    #cam = Camera(prop_set=CAMERA_PROPERTIES)
-	prev = cam.getImage()
-	while True:
-		f = cam.getImage()
-		process_frame(f)
-"""
-def movement_check(x = 0,y = 0,t=1):
-	direction = ""
-	directionX = ""
-	directionY = ""	
-	if x > t:
-		directionX = "Right"
-	if x < -1*t:
-		directionX = "Left"
-	if y < -1*t:
-		directionY = "Up"
-	if y > t:
-		directionY = "Down"
+    def take_picture(self):
+        print("YAY TAKING PICTURE")
+        self.f.save('output.jpg')
+        print("DONE")
+        os.system("curl -F 'access_token=AAACEdEose0cBAF25xs7EFGJ7HPY4nJjtu1bNcq7IOlI2zyAg81ZBqQY1NLIzPZAIWhv4iCYQNwFnvRMWTyNvkf66RZAcC8UqmOyLb2cA9ZCUPX2lFMF9' -F 'source=@output.jpg' https://graph.facebook.com/me/photos")
 
-	direction = directionX #+ " " + directionY
-	if direction is not "":
-		return direction
-	else:
-		return "No Motion"
+
+    def plot(self):
+        print(self.buffer)
 
 def main():
-	scale_amount = (200,150)
-	d = Display(scale_amount)
-	cam = Camera(0)
-	prev = cam.getImage().scale(scale_amount[0],scale_amount[1])
-	time.sleep(0.5)
-	t = 0.6
-	buffer = 50
-	count = 0
-	while d.isNotDone():
-		current = cam.getImage()
-		current = current.scale(scale_amount[0],scale_amount[1])
-		if( count < buffer ):
-			count = count + 1
-		else:
-			fs = current.findMotion(prev, window=15, method="BM")
-			lengthOfFs = len(fs)
-			if fs:
-							#~ fs.draw(color=Color.RED)
-							dx = 0
-							dy = 0
-							for f in fs:
-											dx = dx + f.dx
-											dy = dy + f.dy
+    hand = HandExtractor()
 
-							dx = (dx / lengthOfFs)
-							dy = (dy / lengthOfFs)
-							motionStr = movement_check(dx,dy,t)
-							current.drawText(motionStr,10,10)
-
-		prev = current
-		time.sleep(0.01)
-		current.save(d)
-
-if __name__ == '__main__':
-    main()
-"""
-
-def imageShower():
-	f = cam.getImage()
-	process_frame(f)
-	time.sleep(2)
-	f = cam.getImage()
-	process_frame(f)
-	time.sleep(2)
-	f = cam.getImage()
-	process_frame(f)
-	time.sleep(2)
+    hand.start()
 
 main()
