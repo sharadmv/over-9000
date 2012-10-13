@@ -2,7 +2,6 @@ from SimpleCV import *
 
 import time
 import urllib2 as url
-import sh
 import os
 
 from urllib import urlretrieve
@@ -27,15 +26,16 @@ class HandExtractor:
         while True:
             f = self.camera.getImage()
             self.f = f.copy()
+	    self.f.show()
             hand = self.process_frame(f)
             self.process_hand(hand)
             gesture = self.get_gesture()
             if gesture:
                 self.trigger_gesture(gesture)
-            time.sleep(0.05)
+            time.sleep(0.01)
 
     def get_gesture(self):
-        if self.count >= 10:
+        if self.count >= 7:
             self.penalty = 0
             self.count = 0
             return self.current_direction
@@ -104,12 +104,12 @@ class HandExtractor:
 			circleLayer.circle((x,y), 20, Color.RED, True)
 			image.addDrawingLayer(circleLayer)
 			image.applyLayers()
-			if face:
-				face.show()
+			#image.show()
+			
 		return (x,y)
 
     def trigger_gesture(self, gesture):
-        url.urlopen('http://localhost:8080/api/'+gesture)
+        #url.urlopen('http://localhost:8080/api/'+gesture)
         print("YES A GESTURE:", gesture)
         self.take_picture()
 
