@@ -3,6 +3,17 @@ import time
 
 cam = Camera()
 
+CAMERA_PROPERTIES = {'width':160, 'height':120}
+
+def process_frame(frame):
+    frame.show()
+
+if __name__ == 'main':
+    cam = Camera(prop_set=CAMERA_PROPERTIES)
+    while True:
+        f = cam.getImage()
+        process_frame(f)
+
 def imageHandler(image):
 	img = Image(image);
 	return
@@ -21,7 +32,3 @@ def imageShower():
 		time.sleep(1)
 		b.show()	
 		print(b.area)
-		
-
-imageShower()
-		
