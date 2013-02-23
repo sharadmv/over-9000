@@ -16,9 +16,10 @@ class HandExtractor:
 		self.buffer = []
 		self.difference = []
 		# the number of past points do we keep
-		self.length = 20
-		self.GESTURE_THRESH = 7
+		self.length = 10
+		self.GESTURE_THRESH = 4
 		self.DEBUG_COMMUNICATE = False
+		self.PENALTY_THRESH = 8
 		
 		#testing code
 		self.penalty = 3
@@ -31,7 +32,7 @@ class HandExtractor:
 			self.f = f.copy()
 			#self.f.show()
 			hand = self.process_frame(f)
-			if hand:
+			if(hand):
 				self.process_hand(hand)
 				gesture = self.get_gesture()
 				if gesture:
@@ -49,22 +50,20 @@ class HandExtractor:
 			self.difference.pop(0)
 
 		if len(self.buffer) > 0:
-			diff = (hand[0] - self.buffer[len(self.buffer)-1][0],
-					hand[1] - self.buffer[len(self.buffer)-1][1])
+			diff = (hand[0] - self.buffer[-1][0], hand[1] - self.buffer[-1][1])
 			self.difference.append(diff)
 
 		self.buffer.append(hand)
-		print(self.count)
 
 		if self.difference:
 			if self.current_direction == "left":
-				if diff[0] > 0:
+				if diff[0] > 1.0:
 					self.count += 1
 				else:
 					self.penalty += 1
 
 			elif self.current_direction == "right":
-				if diff[0] < 0:
+				if diff[0] < -1.0:
 					self.count += 1
 				else:
 					self.penalty += 1
@@ -75,24 +74,30 @@ class HandExtractor:
 				else:
 					self.current_direction = "right"
 			
-			if self.penalty == 3:
+			if self.penalty == self.PENALTY_THRESH:
 				self.penalty = 0
 				self.count = 0
 				self.current_direction = None
+			print self.count
 
 	def process_frame(self, image):
 		segment = HaarCascade("face.xml")
-		face = image.findHaarFeatures(segment)
+		result = image
+		face = result.findHaarFeatures(segment)
 
-		blobs = image.findSkintoneBlobs()
+		mask = result.getSkintoneMask()
+		result = result.applyBinaryMask(mask).medianFilter()
+
+		blobs = result.findSkintoneBlobs(minsize=500, dilate_iter=1)
 		x=0
 		y=0
 		if blobs:
-			x,y = blobs[-1].minRectX(), blobs[-1].minRectY()
-			#if face:
-				#face.show()
-			blobs[-1].drawMinRect(color=Color.WHITE)
-		image.show()
+			b = blobs[-1]
+			x,y = b.centroid()
+			if face:
+				face.show()
+			b.drawMinRect(color=Color.CYAN)
+		result.show()
 		return (x,y)
 		
 	def trigger_gesture(self, gesture):
