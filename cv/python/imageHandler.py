@@ -24,6 +24,8 @@ class HandExtractor:
 		self.DETECT_MOTION = True
 		self.MOTION_THRESH = 15.0
 		self.MOTION_COEFF = 2
+		self.MOTION_LENGTH = 1
+		self.motion_count = 0
 		self.current = None
 		self.previous = None
 		
@@ -31,6 +33,7 @@ class HandExtractor:
 		self.penalty = 3
 		self.count = 3
 		self.current_direction = None
+		self.old_motion = None
 
 	def start(self):
 		while True:
@@ -96,19 +99,20 @@ class HandExtractor:
 		direction = ""
 		directionX = ""
 		directionY = ""
-		if x > self.MOTION_COEFF*t:
-			directionX = "Right"
-		if x < -1*self.MOTION_COEFF*t:
-			directionX = "Left"
+		print x, y
+#		if x > self.MOTION_COEFF*t:
+#			directionX = "Left"
+#		if x < -1*self.MOTION_COEFF*t:
+#			directionX = "Right"
 		if y < -1*self.MOTION_COEFF*t:
-			directionY = "Up"
-		if y > 1*self.MOTION_COEFF*t:
 			directionY = "Down"
+		if y > 1*self.MOTION_COEFF*t:
+			directionY = "Up"
 		direction = directionX + " " + directionY
 		if direction is not "":
 			return direction
 		else:
-			return "No Motion"
+			return None
 
 	def process_frame(self, image):
 		if(self.DEBUG_SKIP):
@@ -128,7 +132,17 @@ class HandExtractor:
 				dx = dx/lenMotion
 				dy = dy/lenMotion
 				direction = self.movementCheck(dx,dy,t)
-				print direction
+				#print direction
+
+				if direction == self.old_motion and self.old_motion != None:
+					self.motion_counter += 1
+				else:
+					self.old_motion = direction
+					self.motion_counter = 0
+
+				if self.motion_counter > self.MOTION_LENGTH:
+					print "real:", direction
+					self.motion_counter = 0
 			
 			#diff = self.current - self.previous
 			#matrix = diff.getNumpy()
