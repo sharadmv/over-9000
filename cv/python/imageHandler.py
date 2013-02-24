@@ -20,6 +20,7 @@ class HandExtractor:
 		self.GESTURE_THRESH = 4
 		self.DEBUG_COMMUNICATE = False
 		self.PENALTY_THRESH = 8
+		self.DEBUG_SKIP = True
 		
 		#testing code
 		self.penalty = 3
@@ -33,10 +34,16 @@ class HandExtractor:
 			#self.f.show()
 			hand = self.process_frame(f)
 			if(hand):
-				self.process_hand(hand)
+				self.process_hand(hand[0])
 				gesture = self.get_gesture()
 				if gesture:
 					self.trigger_gesture(gesture)
+	
+	def process_takePic(self, hands):
+		hand1 = hands[0]
+		hand2 = hands[1]
+		return hand1
+
 
 	def get_gesture(self):
 		if self.count >= self.GESTURE_THRESH:
@@ -81,6 +88,9 @@ class HandExtractor:
 			print self.count
 
 	def process_frame(self, image):
+		if(self.DEBUG_SKIP):
+			image.show()
+			return [(0,0)]
 		segment = HaarCascade("face.xml")
 		result = image
 		face = result.findHaarFeatures(segment)
@@ -89,16 +99,20 @@ class HandExtractor:
 		result = result.applyBinaryMask(mask).medianFilter()
 
 		blobs = result.findSkintoneBlobs(minsize=500, dilate_iter=1)
-		x=0
-		y=0
+		x1,y1 = (0,0)
+		x2,y2 = (0,0)
 		if blobs:
-			b = blobs[-1]
-			x,y = b.centroid()
+			b1 = blobs[-1]
+			x1,y1 = b1.centroid()
+			b1.drawMinRect(color=Color.CYAN)
+			if(len(blobs)>=2):
+				b2 = blobs[-2]
+				x2,y2 = b2.centroid() 
+				b2.drawMinRect(color=Color.CYAN)
 			if face:
 				face.show()
-			b.drawMinRect(color=Color.CYAN)
 		result.show()
-		return (x,y)
+		return [(x1,y1),(x2,y2)]
 		
 	def trigger_gesture(self, gesture):
 		#url.urlopen('http://localhost:8080/api/'+gesture)
