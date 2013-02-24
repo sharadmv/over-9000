@@ -20,7 +20,11 @@ class HandExtractor:
 		self.GESTURE_THRESH = 4
 		self.DEBUG_COMMUNICATE = False
 		self.PENALTY_THRESH = 8
-		self.DEBUG_SKIP = True
+		self.DEBUG_SKIP = False
+		self.DETECT_MOTION = True
+		self.MOTION_THRESH = 15.0
+		self.current = None
+		self.previous = None
 		
 		#testing code
 		self.penalty = 3
@@ -29,8 +33,9 @@ class HandExtractor:
 
 	def start(self):
 		while True:
+			self.previous = self.current
 			f = self.camera.getImage()
-			self.f = f.copy()
+			self.current = f.copy()
 			#self.f.show()
 			hand = self.process_frame(f)
 			if(hand):
@@ -85,12 +90,53 @@ class HandExtractor:
 				self.penalty = 0
 				self.count = 0
 				self.current_direction = None
-			print self.count
+
+	def movementCheck(self, x=0, y=0, t=1):
+		direction = ""
+		directionX = ""
+		directionY = ""
+		if x > t:
+			directionX = "Right"
+		if x < -1*t:
+			directionX = "Left"
+		if y < -1*t:
+			directionY = "Up"
+		if y > t:
+			directionY = "Down"
+		direction = directionX + " " + directionY
+		if direction is not "":
+			return direction
+		else:
+			return "No Motion"
 
 	def process_frame(self, image):
 		if(self.DEBUG_SKIP):
 			image.show()
 			return [(0,0)]
+
+		if(self.current and self.previous and self.DETECT_MOTION):
+			t = 0.5
+			motion = self.current.findMotion(self.previous, window=15, method="BM")
+			lenMotion = len(motion)
+			if(motion):
+				dx = 0
+				dy = 0
+				for f in motion:
+					dx += f.dx
+					dy += f.dy
+				dx = dx/lenMotion
+				dy = dy/lenMotion
+				direction = self.movementCheck(dx,dy,t)
+				print direction
+			
+			#diff = self.current - self.previous
+			#matrix = diff.getNumpy()
+			#mean = matrix.mean()
+			#if mean >= self.MOTION_THRESH:
+			#	print "MOTION!"
+			#	return [(0,0)]
+			return [(0,0)]
+
 		segment = HaarCascade("face.xml")
 		result = image
 		face = result.findHaarFeatures(segment)
