@@ -23,6 +23,7 @@ class HandExtractor:
 		self.DEBUG_SKIP = False
 		self.DETECT_MOTION = True
 		self.MOTION_THRESH = 15.0
+		self.MOTION_COEFF = 2
 		self.current = None
 		self.previous = None
 		
@@ -95,13 +96,13 @@ class HandExtractor:
 		direction = ""
 		directionX = ""
 		directionY = ""
-		if x > t:
+		if x > self.MOTION_COEFF*t:
 			directionX = "Right"
-		if x < -1*t:
+		if x < -1*self.MOTION_COEFF*t:
 			directionX = "Left"
-		if y < -1*t:
+		if y < -1*self.MOTION_COEFF*t:
 			directionY = "Up"
-		if y > t:
+		if y > 1*self.MOTION_COEFF*t:
 			directionY = "Down"
 		direction = directionX + " " + directionY
 		if direction is not "":
@@ -135,6 +136,7 @@ class HandExtractor:
 			#if mean >= self.MOTION_THRESH:
 			#	print "MOTION!"
 			#	return [(0,0)]
+			image.show()
 			return [(0,0)]
 
 		segment = HaarCascade("face.xml")
