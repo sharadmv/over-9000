@@ -1,9 +1,12 @@
 from SimpleCV import *
 
+CAMERA_PROPERTIES = {'width':160, 'height':120}
+
 def process_frame(image):
-	segment = HaarCascade("face.xml")
+	#segment = HaarCascade("face.xml")
 	result = image.copy()
-	face = result.findHaarFeatures(segment)
+	#face = result.findHaarFeatures(segment)
+	face = None
 	if face:
 		face.draw(color=Color.CYAN)
 		#f = result.crop(x=face.coordinates()[0][0],y=face.coordinates()[0][1],w=face.width(),h=face.height(),centered=True)
@@ -36,7 +39,7 @@ def process_frame(image):
 	return result
 
 def blah():
-	cam = Camera()
+	cam = Camera(prop_set=CAMERA_PROPERTIES)
 	i = cam.getImage()
 	disp = i.show()
 	while(disp.isNotDone()):

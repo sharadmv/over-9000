@@ -17,10 +17,12 @@ class HandExtractor:
 		self.difference = []
 		# the number of past points do we keep
 		self.length = 10
-		self.GESTURE_THRESH = 4
+		self.GESTURE_THRESH = 3
+		self.GESTURE_INCREMENT = 1.5
 		self.DEBUG_COMMUNICATE = False
 		self.PENALTY_THRESH = 8
 		self.DEBUG_SKIP = False
+		self.DETECT_GESTURES = True
 		self.DETECT_MOTION = True
 		self.MOTION_THRESH = 15.0
 		self.MOTION_COEFF = 2
@@ -42,7 +44,7 @@ class HandExtractor:
 			self.current = f.copy()
 			#self.f.show()
 			hand = self.process_frame(f)
-			if(hand):
+			if(hand and self.DETECT_GESTURES):
 				self.process_hand(hand[0])
 				gesture = self.get_gesture()
 				if gesture:
@@ -70,16 +72,15 @@ class HandExtractor:
 			self.difference.append(diff)
 
 		self.buffer.append(hand)
-
 		if self.difference:
 			if self.current_direction == "left":
-				if diff[0] > 1.0:
+				if diff[0] > self.GESTURE_INCREMENT:
 					self.count += 1
 				else:
 					self.penalty += 1
 
 			elif self.current_direction == "right":
-				if diff[0] < -1.0:
+				if diff[0] < -1*self.GESTURE_INCREMENT:
 					self.count += 1
 				else:
 					self.penalty += 1
@@ -89,6 +90,8 @@ class HandExtractor:
 					self.current_direction = "left"
 				else:
 					self.current_direction = "right"
+
+				print diff[0]
 			
 			if self.penalty == self.PENALTY_THRESH:
 				self.penalty = 0
@@ -99,7 +102,6 @@ class HandExtractor:
 		direction = ""
 		directionX = ""
 		directionY = ""
-		print x, y
 #		if x > self.MOTION_COEFF*t:
 #			directionX = "Left"
 #		if x < -1*self.MOTION_COEFF*t:
@@ -141,7 +143,8 @@ class HandExtractor:
 					self.motion_counter = 0
 
 				if self.motion_counter > self.MOTION_LENGTH:
-					print "real:", direction
+					if direction != " ":
+						print "real:", direction
 					self.motion_counter = 0
 			
 			#diff = self.current - self.previous
@@ -150,8 +153,9 @@ class HandExtractor:
 			#if mean >= self.MOTION_THRESH:
 			#	print "MOTION!"
 			#	return [(0,0)]
-			image.show()
-			return [(0,0)]
+
+			#image.show()
+			#return [(0,0)]
 
 		segment = HaarCascade("face.xml")
 		result = image
@@ -172,7 +176,7 @@ class HandExtractor:
 				x2,y2 = b2.centroid() 
 				b2.drawMinRect(color=Color.CYAN)
 			if face:
-				face.show()
+				face.draw()
 		result.show()
 		return [(x1,y1),(x2,y2)]
 		
